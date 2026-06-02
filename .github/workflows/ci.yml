@@ -1,0 +1,52 @@
+name: Multi-Docker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Build the development image for the client to run tests
+      # We target the ./client directory and use Dockerfile.dev
+      - name: Build Client Dev Image
+        run: docker build -t kuldeep04/react-test -f ./client/Dockerfile.dev ./client
+
+      # 3. Run tests in non-interactive mode
+      # -e CI=true ensures the React test runner does not hang
+      - name: Run Tests
+        run: docker run -e CI=true kuldeep04/react-test npm run test -- --coverage
+
+      # 4. Log in to Docker Hub using GitHub Secrets
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 5. Build production images for all four directories
+      # We build from the root of each directory using their default production Dockerfiles
+      - name: Build Production Images
+        run: |
+          docker build -t kuldeep04/multi-client ./client
+          docker build -t kuldeep04/multi-nginx ./nginx
+          docker build -t kuldeep04/multi-server ./server
+          docker build -t kuldeep04/multi-worker ./worker
+
+      # 6. Push all production images to Docker Hub
+      - name: Push Images to Docker Hub
+        run: |
+          docker push kuldeep04/multi-client
+          docker push kuldeep04/multi-nginx
+          docker push kuldeep04/multi-server
+          docker push kuldeep04/multi-worker
