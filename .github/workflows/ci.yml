@@ -33,6 +33,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+        
+      - name: Verify Docker Login
+        run: docker info      
 
       # 5. Build production images for all four directories
       # We build from the root of each directory using their default production Dockerfiles
